@@ -9,9 +9,7 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
 from tensorboardX import SummaryWriter
-import apex
-from apex.parallel import DistributedDataParallel as DDP
-from apex import amp
+# from apex import amp
 
 from model import DetconBModel
 from optimizer import LARS
@@ -102,15 +100,19 @@ class DetconBTrainer():
         self.data_ins = ImageLoader(self.config)
         self.train_loader = self.data_ins.get_loader(self.stage, self.train_batch_size)
 
-        self.sync_bn = self.config['amp']['sync_bn']
-        self.opt_level = self.config['amp']['opt_level']
+        # self.sync_bn = self.config['amp']['sync_bn']
+        self.sync_bn = False
+        # self.opt_level = self.config['amp']['opt_level']
+        self.opt_level = "O0"
         print(f"sync_bn: {self.sync_bn}")
 
         """build model"""
         print("init DetconB model!")
         net = DetconBModel(self.config)
-        if self.sync_bn:
-            net = apex.parallel.convert_syncbn_model(net)
+        
+        #! we are not doing this
+        # if self.sync_bn:
+           # net = apex.parallel.convert_syncbn_model(net)
         self.model = net.to(self.device)
         print("init DetconB model end!")
 
@@ -125,11 +127,16 @@ class DetconBTrainer():
 
         """init amp"""
         print("amp init!")
-        self.model, self.optimizer = amp.initialize(
-            self.model, self.optimizer, opt_level=self.opt_level)
+        # no amp! 
+        #self.model, self.optimizer = amp.initialize(
+        #    self.model, self.optimizer, opt_level=self.opt_level)
 
+        """
+        we are not using distributed!
         if self.distributed:
             self.model = DDP(self.model, delay_allreduce=True)
+        """
+        
         print("amp init end!")
 
     # resume snapshots from pre-train
@@ -145,7 +152,7 @@ class DetconBTrainer():
             self.steps = checkpoint['steps']
             self.model.load_state_dict(checkpoint['model'], strict=True)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
-            amp.load_state_dict(checkpoint['amp'])
+            # amp.load_state_dict(checkpoint['amp'])
             self.logging.info(f"--> Loaded checkpoint '{model_path}' (epoch {self.start_epoch})")
 
     # save snapshots
@@ -156,7 +163,7 @@ class DetconBTrainer():
                      'steps': self.steps,
                      'model': self.model.state_dict(),
                      'optimizer': self.optimizer.state_dict(),
-                     'amp': amp.state_dict()
+                     'amp': False
                     }
             torch.save(state, self.ckpt_path.format(epoch))
 
@@ -228,9 +235,10 @@ class DetconBTrainer():
             self.optimizer.zero_grad()
             if self.opt_level == 'O0':
                 loss.backward()
-            else:
-                with amp.scale_loss(loss, self.optimizer) as scaled_loss:
-                    scaled_loss.backward()
+            #! again, we are not doing amp!
+            #else:
+             #   with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+              #      scaled_loss.backward()
             self.optimizer.step()
             backward_time.update(time.time() - tflag)
             loss_meter.update(loss.item(), view1.size(0))

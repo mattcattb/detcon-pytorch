@@ -32,8 +32,9 @@ def convert_binary_mask(mask,max_mask_id=256,pool_size=7):
     binary_mask = torch.eq(mask_ids, mask).float()
     binary_mask = torch.nn.AdaptiveAvgPool2d((pool_size,pool_size))(binary_mask)
     binary_mask = torch.reshape(binary_mask,(batch_size,max_mask_id,pool_size*pool_size)).permute(0,2,1)
-    binary_mask = torch.argmax(binary_mask, axis=-1)
-    binary_mask = torch.eye(max_mask_id)[binary_mask]
+    binary_mask = torch.argmax(binary_mask, axis=-1).to('cuda')
+
+    binary_mask = torch.eye(max_mask_id).to('cuda')[binary_mask]
     binary_mask = binary_mask.permute(0, 2, 1)
     return binary_mask
 

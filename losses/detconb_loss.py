@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch import nn
+import torch.distributed
 from utils.distributed_utils import gather_from_all
 #from classy_vision.generic.distributed_util import gather_from_all
 
@@ -40,8 +41,11 @@ class DetconBInfoNCECriterion(nn.Module):
         pred2 = torch.nn.functional.normalize(pred2,dim=-1)
         target1 = torch.nn.functional.normalize(target1,dim=-1)
         target2 = torch.nn.functional.normalize(target2,dim=-1)
+
+        is_distrib_available = torch.distributed.is_available()
+        is_distrubuted_init = torch.distributed.is_initialized()
         
-        if torch.distributed.is_available() and torch.distributed.is_initialized():
+        if is_distrib_available and is_distrubuted_init:
             labels_idx = np.arange(self.batch_size) + self.rank * self.batch_size
             
             target1_large = gather_from_all(target1)
@@ -50,6 +54,16 @@ class DetconBInfoNCECriterion(nn.Module):
 
             labels_local = torch.nn.functional.one_hot(torch.tensor(labels_idx),
                                                        enlarged_batch_size).unsqueeze(1).unsqueeze(3).to('cuda')
+        else:
+            
+            target1_large = target1
+            target2_large = target2
+            enlarged_batch_size = self.batch_size
+
+            labels_local = torch.nn.functional.one_hot(
+                torch.arange(self.batch_size, device='cuda'),
+                num_classes=enlarged_batch_size
+            ).unsqueeze(1).unsqueeze(3)
 
         logits_aa = torch.einsum("abk,uvk->abuv", pred1, target1_large) / self.temperature
         logits_bb = torch.einsum("abk,uvk->abuv", pred2, target2_large) / self.temperature
