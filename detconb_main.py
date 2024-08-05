@@ -11,12 +11,17 @@ import argparse
 parser = argparse.ArgumentParser(description='Detcon-BYOL Training')
 parser.add_argument("--local_rank", metavar="Local Rank", type=int, default=0, 
                     help="Torch distributed will automatically pass local argument")
+
+#parser.add_argument("--local-rank", type=int, default=0,
+ #                   help="Local rank. Necessary for using torchrun.")
+
 parser.add_argument("--cfg", metavar="Config Filename", default="train_imagenet_300", 
                     help="Experiment to run. Default is Imagenet 300 epochs")
-                    
+
+
 def run_task(config):
     logging = logging_util.get_std_logging()
-    if config['distributed']:
+    if config['distributed'] is True:
         world_size = int(os.environ['WORLD_SIZE'])
         rank = int(os.environ['RANK'])
         local_rank = int(os.environ.get('LOCAL_RANK', '0'))        
@@ -37,6 +42,13 @@ def run_task(config):
 
 def main():
     args = parser.parse_args()
+    if 'LOCAL_RANK' in os.environ:
+        args.local_rank = int(os.environ['LOCAL_RANK'])
+    elif hasattr(args, 'local_rank'):
+        args.local_rank = args.local_rank
+    elif hasattr(args, 'local-rank'):
+        args.local_rank = getattr(args, 'local-rank')
+
     cfg = args.cfg if args.cfg[-5:] == '.yaml' else args.cfg + '.yaml'
     config_path = os.path.join(os.getcwd(), 'config', cfg)
     assert os.path.exists(config_path), f"Could not find {cfg} in configs directory!"
