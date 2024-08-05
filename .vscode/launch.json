@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python: Detcon FH Mask Generation (validation)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/gen_masks_tf.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--dataset_dir", "/media/mattyb/UBUNTU 22_0/datasets/imagenet_strawberries/images/val",
+                "--output_dir", "/media/mattyb/UBUNTU 22_0/datasets/imagenet_strawberries/masks/val_test_masks",
+                "--mask_type", "fh",
+                "--experiment_name", "exp_val"
+            ]
+        },
+
+        // rememebr /media/mattyb/UBUNTU 22_0/our_data/datasets/imagenet_strawberries/masks/train must be the actual path location
+        {
+            "name": "BYOL Small Batch Training Test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/detconb_main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--cfg", "${workspaceFolder}/config/debug_train.yaml"
+            ],
+            "env": {
+                "MASTER_ADDR": "localhost",  // Replace with the appropriate master address
+                "MASTER_PORT": "12345"       // Ensure this matches the --master_port argument
+            }
+        }
+    ]
+}
